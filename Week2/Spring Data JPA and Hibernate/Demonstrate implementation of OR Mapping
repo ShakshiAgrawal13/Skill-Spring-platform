@@ -1,0 +1,186 @@
+//Country.java
+package com.example.jpa.entity;
+
+import jakarta.persistence.*;
+import java.util.ArrayList;
+import java.util.List;
+
+@Entity
+public class Country {
+
+    @Id
+    private String code;
+    private String name;
+
+    @OneToMany(mappedBy = "country", cascade = CascadeType.ALL)
+    private List<State> states = new ArrayList<>();
+
+    public Country() {
+    }
+
+    public Country(String code, String name) {
+        this.code = code;
+        this.name = name;
+    }
+
+    public void addState(State state) {
+        states.add(state);
+        state.setCountry(this);
+    }
+
+    public String getCode() {
+        return code;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public List<State> getStates() {
+        return states;
+    }
+}
+
+
+//State.java
+package com.example.jpa.entity;
+
+import jakarta.persistence.*;
+
+@Entity
+public class State {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    private String stateName;
+
+    @ManyToOne
+    @JoinColumn(name = "country_code")
+    private Country country;
+
+    public State() {
+    }
+
+    public State(String stateName) {
+        this.stateName = stateName;
+    }
+
+    public Long getId() {
+        return id;
+    }
+
+    public String getStateName() {
+        return stateName;
+    }
+
+    public Country getCountry() {
+        return country;
+    }
+
+    public void setCountry(Country country) {
+        this.country = country;
+    }
+}
+
+
+//CountryRepository.java
+package com.example.jpa.repository;
+
+import com.example.jpa.entity.Country;
+import org.springframework.data.jpa.repository.JpaRepository;
+
+public interface CountryRepository extends JpaRepository<Country, String> {
+
+}
+
+
+//StateRepository.java
+package com.example.jpa.repository;
+
+import com.example.jpa.entity.State;
+import org.springframework.data.jpa.repository.JpaRepository;
+
+public interface StateRepository extends JpaRepository<State, Long> {
+
+}
+
+
+//CountryService.java
+package com.example.jpa.service;
+
+import com.example.jpa.entity.Country;
+import com.example.jpa.repository.CountryRepository;
+import org.springframework.stereotype.Service;
+
+import java.util.List;
+
+@Service
+public class CountryService {
+
+    private final CountryRepository repository;
+
+    public CountryService(CountryRepository repository) {
+        this.repository = repository;
+    }
+
+    public Country addCountry(Country country) {
+        return repository.save(country);
+    }
+
+    public List<Country> getAllCountries() {
+        return repository.findAll();
+    }
+}
+
+
+//JpaApplication.java
+package com.example.jpa;
+
+import com.example.jpa.entity.Country;
+import com.example.jpa.entity.State;
+import com.example.jpa.service.CountryService;
+import org.springframework.boot.CommandLineRunner;
+import org.springframework.boot.SpringApplication;
+import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.context.annotation.Bean;
+
+@SpringBootApplication
+public class JpaApplication {
+
+    public static void main(String[] args) {
+        SpringApplication.run(JpaApplication.class, args);
+    }
+
+    @Bean
+    CommandLineRunner run(CountryService service) {
+        return args -> {
+
+            Country india = new Country("IN", "India");
+
+            india.addState(new State("Uttar Pradesh"));
+            india.addState(new State("Delhi"));
+            india.addState(new State("Maharashtra"));
+
+            service.addCountry(india);
+
+            System.out.println("Country : " + india.getName());
+
+            india.getStates().forEach(state ->
+                    System.out.println("State : " + state.getStateName()));
+        };
+    }
+}
+
+
+//application.properties
+spring.datasource.url=jdbc:h2:mem:testdb
+spring.datasource.driverClassName=org.h2.Driver
+spring.datasource.username=sa
+spring.datasource.password=
+
+spring.jpa.hibernate.ddl-auto=update
+spring.jpa.show-sql=true
+
+spring.h2.console.enabled=true
